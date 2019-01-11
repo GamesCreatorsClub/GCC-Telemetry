@@ -1,4 +1,3 @@
-
 #
 # Copyright 2019 Games Creators Club
 #
@@ -7,11 +6,11 @@
 
 import struct
 
-STREAM_ID_BYTE = 1
-STREAM_ID_WORD = 2
-STREAM_SIZE_BYTE = 4
-STREAM_SIZE_WORD = 8
-STREAM_SIZE_LONG = 16
+STREAM_ID_BYTE = 0
+STREAM_ID_WORD = 1
+STREAM_SIZE_BYTE = 0
+STREAM_SIZE_WORD = 2
+STREAM_SIZE_LONG = 4
 
 TYPE_BYTE = 'b'
 TYPE_WORD = 'w'
@@ -215,7 +214,6 @@ class TelemetryStreamDefinition:
         self.name = name
         self.stream_id = 0  # Not defined yet
         self.buildCallback = None
-        self.storage = None
         self.fields = []
         self.fixed_length = 0
         self.pack_string = None
@@ -281,7 +279,9 @@ class TelemetryStreamDefinition:
         if self.pack_string is not None:
             self.pack_string = '<d' + self.pack_string
             self.fixed_length += 8
-        self.buildCallback(self)
+
+        if self.buildCallback is not None:
+            self.buildCallback(self)
 
         self.header_pack = '<b'
         if self.stream_id < 256:
@@ -303,15 +303,18 @@ class TelemetryStreamDefinition:
 
         self.header = struct.pack(self.header_pack, self.header_byte, self.stream_id, self.fixed_length)
 
-    def log(self, timestamp, *args):
+    def extractTimestamp(self, record):
+        return struct.unpack('<d', record[0:8])[0]
+
+    def log(self, time_stamp, *args):
         if self.fixed_length is None:
             raise NotImplemented("Variable record size len is not yet implemented")
 
         if self.storage is None:
             raise NotImplemented("Stream storage is not set")
 
-        record = struct.pack(self.pack_string, timestamp, *args)
-        self.storage.store(self, self, timestamp, record)
+        record = struct.pack(self.pack_string, time_stamp, *args)
+        self.storage.store(self, self, time_stamp, record)
 
     def retrieve(self, from_timestamp, to_timestmap):
         if self.storage is None:
@@ -329,10 +332,10 @@ class TelemetryStreamDefinition:
         if self.storage is None:
             raise NotImplemented("Stream storage is not set")
 
-        self.storage.getOldestTimestamp(self,)
+        return self.storage.getOldestTimestamp(self)
 
     def toJSON(self):
-        return "{ \"name\" : \"" + self.name + "\", \"fields\" : { " + ", ".join(["\"" + field.name + "\" : { " + field.toJSON() + " }" for field in self.fields]) + " } }"
+        return "{ \"id\" : " + str(self.stream_id) + ", \"name\" : \"" + self.name + "\", \"fields\" : { " + ", ".join(["\"" + field.name + "\" : { " + field.toJSON() + " }" for field in self.fields]) + " } }"
 
 
 def streamFromJSON(json):
@@ -340,8 +343,8 @@ def streamFromJSON(json):
     def constToObject(v):
         return False if v == 'false' else True
 
-    def decodeString(s):
-        return bytes(s, "utf-8").decode("unicode_escape")
+    def decodeString(v):
+        return bytes(v, "utf-8").decode("unicode_escape")
 
     STATE_TOP = 1
     STATE_OBJECT = 2
@@ -499,12 +502,15 @@ def streamFromJSON(json):
 
     # after parsing
     # print("Got: " + str(top))
+    if 'id' not in top:
+        raise SyntaxError("Missing 'id' value")
     if 'name' not in top:
         raise SyntaxError("Missing 'name' value")
     if 'fields' not in top:
         raise SyntaxError("Missing 'fields' value")
 
     stream = TelemetryStreamDefinition(top['name'])
+    stream.stream_id = int(top['id'])
     fields = top['fields']
     for fieldName in fields:
         field = fields[fieldName]
@@ -528,7 +534,3 @@ def streamFromJSON(json):
             stream.addFixedBytes(fieldName, field['size'])
 
     return stream
-
-
-if __name__ == "__main__":
-    pass

@@ -1,15 +1,13 @@
-
 #
 # Copyright 2019 Games Creators Club
 #
 # MIT License
 #
-import os
-import uuid
-import time
-import struct
 
-from telemetry.telemetry_stream import *
+import os
+import struct
+import time
+import uuid
 
 
 def _findTimeIndex(values, the_time, starting_from=0):
@@ -49,7 +47,7 @@ class MemoryTelemetryStorage(TelemetryStorage):
         return self.streams[stream.name]
 
     def store(self, stream, time_stamp, record):
-        self._values(stream).append(time_stamp, record)
+        self._values(stream).append([time_stamp, record])
 
     def trim(self, stream, to_timestamp):
         values = self._values(stream)
@@ -66,8 +64,9 @@ class MemoryTelemetryStorage(TelemetryStorage):
                 end = _findTimeIndex(values, to_timestmap, starting_from=start)
 
                 callback(values[start: end])
+                return
 
-        return callback([])
+        callback([])
 
     def getOldestTimestamp(self, stream, callback):
         values = self.streams[stream.name]
@@ -178,58 +177,3 @@ class LocalPipePubSubTelemetryStorage(ClientPubSubTelemetryStorage):
     def getOldestTimestamp(self, stream, callback):
         # use ClientPubSubTelemetryStorage for rest of the communication
         super(LocalPipePubSubTelemetryStorage, self).getOldestTimestamp(stream, callback)
-
-
-class Telemetry:
-    def __init__(self, storage=None):
-        if storage is None:
-            self.storage = LocalPipePubSubTelemetryStorage
-        else:
-            self.storage = storage
-        self.streams = []
-
-    def newStream(self, name):
-        stream = TelemetryStreamDefinition(name)
-        self.setupStreamBuilder(stream)
-        return stream
-
-    def setupStreamBuilder(self, stream):
-        stream.buildCallback = self._buildStream
-        stream.storage = self.storage
-
-    def _buildStream(self, stream):
-        self.streams.append(stream)
-        # do something with server so stream is stored at the server and id retrieved back!
-
-    def listStreamsToJSON(self):
-        return "[" + ", ".join(["\"" + stream.name + "\"" for stream in self.streams]) + "]"
-
-
-if __name__ == "__main__":
-
-    t = Telemetry()
-
-    s = t.newStream("new stream")
-    s.addByte("x", signed=True)
-    s.addWord("y", signed=True)
-    s.addInt("z", signed=True)
-    s.addLong("w", signed=True)
-    s.build(1)
-
-    print("JSON: " + s.toJSON())
-    print("Stream from JSON: " + streamFromJSON(s.toJSON()).toJSON())
-
-    other_stream = streamFromJSON(s.toJSON())
-    other_stream.name = "other stream"
-
-    t.setupStreamBuilder(other_stream)
-    other_stream.build(1)
-
-    print("Pack string is " + s.pack_string)
-
-    timestamp = time.time()
-    s.log(timestamp, 1, 2, 3, 4)
-    #
-    # print("Next record is " + str(s.nextRecord()))
-
-    print("Streams: " + str(t.listStreamsToJSON()))

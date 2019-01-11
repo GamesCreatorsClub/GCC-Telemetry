@@ -5,5 +5,7 @@
 # MIT License
 #
 
-from telemetry_common.telemetry import *
+from telemetry.telemetry_stream import *
+from telemetry.telemetry_storage import *
+from telemetry.telemetry_logger import *
 from telemetry.telemetry import *
