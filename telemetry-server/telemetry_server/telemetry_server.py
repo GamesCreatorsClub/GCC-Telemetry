@@ -1,10 +1,8 @@
-
 #
 # Copyright 2019 Games Creators Club
 #
 # MIT License
 #
-
 
 from telemetry import streamFromJSON
 from telemetry.telemetry_storage import *
@@ -102,6 +100,7 @@ class PubSubLocalPipeTelemetryServer(TelemetryServer):
                 time.sleep(0.02)
 
     def _handleRegister(self, topic, payload):
+        payload = str(payload, 'UTF-8')
         i = payload.index(',')
         response_topic = payload[0:i]
         stream_definition = payload[i+1:]
@@ -111,11 +110,13 @@ class PubSubLocalPipeTelemetryServer(TelemetryServer):
 
     def _handleGetStreams(self, topic, payload):
         if len(self.streams) > 0:
+            payload = str(payload, 'UTF-8')
             topic = payload
             streams = "\n".join(self.streams)
             self.pub_method(topic, streams)
 
     def _handleGetStreamDefinition(self, topic, payload):
+        payload = str(payload, 'UTF-8')
         response_topic = payload
         stream_name = topic[topic.rindex('/') + 1:]
         if stream_name in self.streams:
@@ -123,6 +124,7 @@ class PubSubLocalPipeTelemetryServer(TelemetryServer):
             self.pub_method(response_topic, stream.toJSON())
 
     def _handleGetOldestTimestamp(self, topic, payload):
+        payload = str(payload, 'UTF-8')
         response_topic = payload
         stream_name = topic[topic.rindex('/') + 1:]
         if stream_name in self.streams:
@@ -130,13 +132,14 @@ class PubSubLocalPipeTelemetryServer(TelemetryServer):
             self.stream_storage.getOldestTimestamp(stream, lambda value: self.pub_method(response_topic, struct.pack('<d', value)))
 
     def _handleTrim(self, topic, payload):
-        i = topic.last_index()
+        payload = str(payload, 'UTF-8')
         stream_name = topic[topic.rindex('/') + 1:]
         if stream_name in self.streams:
             stream = self.streams[stream_name]
             self.stream_storage.trim(stream, float(payload))
 
     def _handleRetrieve(self, topic, payload):
+        payload = str(payload, 'UTF-8')
         stream_name = topic[topic.rindex('/') + 1:]
         response_topic, from_timestamp, to_timestamp = payload.split(",")
         if stream_name in self.streams:
@@ -148,7 +151,6 @@ class PubSubLocalPipeTelemetryServer(TelemetryServer):
             self.pub_method(topic, functools.reduce(lambda x, y: x + y, [r[1] for r in records]))
         else:
             print("*** got zero records")
-
 
 
 if __name__ == "__main__":

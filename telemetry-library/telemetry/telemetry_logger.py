@@ -98,10 +98,6 @@ class TelemetryLogger(TelemetryStreamDefinition):
             self.destination = LocalPipeTelemetryLoggerDestination()
         else:
             self.destination = destination
-        # if telemetry_client is None:
-        #     self.telemetry_client = PubSubTelemetryLoggerClient("telemetry", None, None)
-        # else:
-        #     self.telemetry_client = telemetry_client
         self.telemetry_client = telemetry_client
 
     def _finishRegistration(self, stream_id):

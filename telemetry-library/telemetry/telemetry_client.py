@@ -55,6 +55,7 @@ class StreamCallback:
             del self.oldest_callbacks[0]
 
     def _handleStreamDef(self, topic, payload):
+        payload = str(payload, 'UTF-8')
         self.stream = streamFromJSON(payload)
         self.stream.build(self.stream.stream_id)
         while len(self.defs_callbacks) > 0:
@@ -97,6 +98,7 @@ class PubSubTelemetryClient(TelemetryClient):
         self.sub_method(self.streams_topic, self._handleStreams)
 
     def _handleStreams(self, topic, payload):
+        payload = str(payload, 'UTF-8')
         stream_names = payload.split("\n")
         while len(self.streams_callbacks) > 0:
             self.streams_callbacks[0](stream_names)
