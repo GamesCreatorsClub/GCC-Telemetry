@@ -107,9 +107,9 @@ def process_oldest_timestamp(oldest_timestamp):
     if result_type == RESULT_TYPE_CSV:
         if filename is not None:
             file = open(filename, "wt")
-            file.write("timestamp" + ",".join(f.name for f in stream.fields) + "\n")
+            file.write("timestamp," + ",".join(f.name for f in stream.fields) + "\n")
         else:
-            print("timestamp" + ",".join(f.name for f in stream.fields))
+            print("timestamp," + ",".join(f.name for f in stream.fields))
     else:
         if filename is not None:
             file = open(filename, "wt")
