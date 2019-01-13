@@ -8,10 +8,6 @@ from telemetry.telemetry_mqtt import MQTTWrapper
 from telemetry_server import PubSubLocalPipeTelemetryServer
 
 
-def _nothing():
-    pass
-
-
 class MQTTLocalPipeTelemetryServer(PubSubLocalPipeTelemetryServer):
     def __init__(self, host="localhost", port=1883, topic="telemetry"):
         self.mqtt = MQTTWrapper(host, port, topic)

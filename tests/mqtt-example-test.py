@@ -88,6 +88,8 @@ print("Received stream def " + str(test_stream.toJSON()))
 
 time.sleep(1)
 
+client.trim(test_stream, 1.9)
+
 client.retrieve(test_stream, 0, time.time(), receive_test_stream_data)
 
 while test_stream_data is None:

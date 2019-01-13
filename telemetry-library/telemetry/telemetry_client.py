@@ -49,7 +49,7 @@ class StreamCallback:
             del self.retrieve_callbacks[0]
 
     def _handleOldest(self, topic, payload):
-        oldest = struct.unpack('<d', payload)
+        oldest = struct.unpack('<d', payload)[0]
         while len(self.oldest_callbacks) > 0:
             self.oldest_callbacks[0](oldest)
             del self.oldest_callbacks[0]
@@ -73,13 +73,13 @@ class TelemetryClient:
     def getStreamDefinition(self, stream_name, callback):
         pass
 
-    def getOldestTimestamp(self, stream_name, callback):
+    def getOldestTimestamp(self, stream, callback):
         pass
 
-    def trim(self, stream_name, to_timestamp):
+    def trim(self, stream, to_timestamp):
         pass
 
-    def retrieve(self, stream_name, from_timestamp, to_timestmap, callback):
+    def retrieve(self, stream, from_timestamp, to_timestmap, callback):
         pass
 
 
@@ -135,7 +135,7 @@ class PubSubTelemetryClient(TelemetryClient):
 
         streamCallback = self._addStreamCallback(stream.name)
         streamCallback.oldest_callbacks.append(callback)
-        self.pub_method(streamCallback.oldestTimestampTopic , streamCallback.oldestTimestampTopic)
+        self.pub_method(self.topic + "/oldest/" + stream.name, streamCallback.oldestTimestampTopic)
 
     def trim(self, stream, to_timestamp):
         self.pub_method(self.topic + "/trim/" + stream.name, str(to_timestamp))

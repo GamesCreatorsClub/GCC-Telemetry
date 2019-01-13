@@ -5,5 +5,4 @@
 # MIT License
 #
 
-from telemetry.telemetry import *
 from telemetry_server.telemetry_server import *
