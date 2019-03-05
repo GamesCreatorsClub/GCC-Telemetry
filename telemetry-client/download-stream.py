@@ -6,6 +6,7 @@
 # MIT License
 #
 
+import os
 import sys
 import telemetry
 from telemetry.telemetry_mqtt import MQTTTelemetryClient
@@ -15,13 +16,14 @@ args = sys.argv
 
 
 def printHelp():
-    print("usage: download-steram -h <mqtt-host> -p <mqtt-port> [(-f|--file) <filename>] [-c|--CSV] [-b|--binary] [-d|--delete] <host[:port]> <stream-name>")
+    print("usage: download-steram [(-f|--file) <filename>] [(-c|--CSV)|(-b|--binary)] [-d|--delete] [(-t|--topic) <topic>] <host[:port]> <stream-name>")
     print(" ")
     print("    -h                    help message")
     print("    -f|--file             filename. If supplied output will go to that file, otherwise to stdout.")
     print("    -c|--CSV              result output will be CSV. This is default.")
     print("    -b|--binary           result output will be binary.")
     print("    -d|--delete           remove data after downloading.")
+    print("    -t|--topic <topic>    topic to be used for retrieving telemetry. Default is 'telemetry'.")
     print("     <host[:port]>        MQTT broker host and port. Default port is 1883.")
     print("    <stream-name>         name of stream.")
 
@@ -36,11 +38,12 @@ delete = False
 host = None
 port = 1883
 stream_name = None
-timeout = 3
+timeout = 60
 stream = None
 timestamp = None
-step = 15  # 15 seconds a time
+step = 10  # 15 seconds a time
 time_to_leave = False
+topic = "telemetry"
 
 i = 1
 
@@ -64,6 +67,15 @@ while i < len(args):
         result_type = RESULT_TYPE_BINARY
     elif arg == '-d' or arg == '--delete':
         delete = True
+    elif arg == '-t' or arg == '--topic':
+        if i + 1 >= len(args):
+            print("Missing <topic> argument")
+            print("")
+            printHelp()
+            sys.exit(1)
+        else:
+            i += 1
+            topic = args[i]
     elif host is None:
         hostport = arg.split(':')
         if len(hostport) > 1:
@@ -96,27 +108,33 @@ if stream_name is None:
 
 def process_stream_def(stream_def):
     global stream
-    stream = stream_def
-    client.getOldestTimestamp(stream, process_oldest_timestamp)
+    if stream_def is None:
+        print("No such stream")
+        sys.exit(-1)
+    else:
+        stream = stream_def
+        client.getOldestTimestamp(stream, process_oldest_timestamp)
 
 
-def process_oldest_timestamp(oldest_timestamp):
+def process_oldest_timestamp(oldest_timestamp, records_count):
     global timestamp, file
     timestamp = oldest_timestamp
+    print("   The oldest timestamp is " + str(oldest_timestamp) + " (it is " + str(time.time() - oldest_timestamp) + "s ago) and there are " + str(records_count) + " records.")
 
     if result_type == RESULT_TYPE_CSV:
         if filename is not None:
-            file = open(filename, "wt")
+            file = open(os.path.expanduser(filename), "wt")
             file.write("timestamp," + ",".join(f.name for f in stream.fields) + "\n")
         else:
             print("timestamp," + ",".join(f.name for f in stream.fields))
     else:
         if filename is not None:
-            file = open(filename, "wt")
+            file = open(os.path.expanduser(filename), "wt")
         else:
             print(",".join(f.name for f in stream.fields))
 
-    client.retrieve(stream, timestamp, timestamp + step, process_data)
+    if records_count > 0:
+        client.retrieve(stream, timestamp, timestamp + step, process_data)
 
 
 def process_data(records):
@@ -136,7 +154,7 @@ def process_data(records):
             else:
                 print(" ".join(["0x%02x" % b for b in stream.rawRecord(*record)]))
 
-    if timestamp > time.time():
+    if timestamp > time.time() or len(records) == 0:
         if file is not None:
             file.close()
         if delete:
@@ -152,7 +170,9 @@ def process_data(records):
     client.retrieve(stream, timestamp, timestamp + step, process_data)
 
 
-client = MQTTTelemetryClient(host=host, port=port)
+print("    Using topic " + topic)
+
+client = MQTTTelemetryClient(host=host, port=port, topic=topic)
 
 client.getStreamDefinition(stream_name, process_stream_def)
 

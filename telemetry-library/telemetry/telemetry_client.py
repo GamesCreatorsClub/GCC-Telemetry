@@ -44,20 +44,24 @@ class StreamCallback:
             record = struct.unpack(self.stream.pack_string, payload[i * record_length: (i + 1) * record_length])
             records.append(record)
 
-        while len(self.retrieve_callbacks) > 0:
-            self.retrieve_callbacks[0](records)
-            del self.retrieve_callbacks[0]
+        callbacks = self.retrieve_callbacks
+        self.retrieve_callbacks = []
+
+        while len(callbacks) > 0:
+            callbacks[0](records)
+            del callbacks[0]
 
     def _handleOldest(self, topic, payload):
-        oldest = struct.unpack('<d', payload)[0]
+        oldest, size = struct.unpack('<di', payload)
         while len(self.oldest_callbacks) > 0:
-            self.oldest_callbacks[0](oldest)
+            self.oldest_callbacks[0](oldest, size)
             del self.oldest_callbacks[0]
 
     def _handleStreamDef(self, topic, payload):
         payload = str(payload, 'UTF-8')
         self.stream = streamFromJSON(payload)
-        self.stream.build(self.stream.stream_id)
+        if self.stream is not None:
+            self.stream.build(self.stream.stream_id)
         while len(self.defs_callbacks) > 0:
             self.defs_callbacks[0](self.stream)
             del self.defs_callbacks[0]
