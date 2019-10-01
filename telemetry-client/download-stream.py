@@ -8,7 +8,6 @@
 
 import os
 import sys
-import telemetry
 from telemetry.telemetry_mqtt import MQTTTelemetryClient
 import time
 

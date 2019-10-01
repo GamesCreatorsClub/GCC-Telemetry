@@ -40,8 +40,11 @@ class LocalPipeTelemetryLoggerDestination(TelemetryLoggerDestination):
 
         record = struct.pack(stream.pack_string, time_stamp, *args)
 
-        self.pipe.write(stream.header)
-        self.pipe.write(record)
+        buf = stream.header + record
+
+        # print("Logger: writing " + str(len(buf)))
+        self.pipe.write(buf)
+        # self.pipe.write(record)
 
 
 class LocalMemoryTelemetryLoggerDestination(TelemetryLoggerDestination):
